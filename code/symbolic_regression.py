@@ -28,12 +28,12 @@ N_REP, N_FOLD = 5, 5
 def load_data(path):
     wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
     if 'Sheet2' not in wb.sheetnames:
-        raise ValueError('原始数据工作簿中找不到 Sheet2。')
+        raise ValueError('Sheet2 was not found in the source workbook.')
     rows = [r[:6] for r in wb['Sheet2'].iter_rows(min_row=2, values_only=True)
             if r[0] is not None]
     data = np.asarray(rows, dtype=float)
     if data.ndim != 2 or data.shape[1] < 6:
-        raise ValueError('Sheet2 必须包含6列：ratio、f、T、rho、Ls、ub。')
+        raise ValueError('Sheet2 must contain six columns: ratio, f, T, rho, Ls, and ub.')
     db = data[:, :5].copy()
     ub = data[:, 5].copy()
     fixes = {
@@ -103,7 +103,7 @@ def scores(y_nm, pred_nm):
 
 def main():
     if not os.path.isfile(DATA_PATH):
-        raise FileNotFoundError(f'找不到数据文件：{DATA_PATH}')
+        raise FileNotFoundError(f'Data file not found: {DATA_PATH}')
 
     db, ub = load_data(DATA_PATH)
     X, y_star = reduced_variables(db)
@@ -112,17 +112,17 @@ def main():
     selected = np.isfinite(ub) & (ub < U_LIMIT)
     idx = np.where(selected)[0]
     if len(idx) < N_FOLD:
-        raise ValueError('满足实际 ub < 100 m/s 的数据不足以进行5折交叉验证。')
+        raise ValueError('Insufficient data with actual ub < 100 m/s for 5-fold cross-validation.')
 
     splits = make_splits(idx)
     feature_names = ['eps_star', 'rho_star', 'T_star', 'f_star']
     all_results = {}
 
-    print(f'总数据：{n}；实际 ub < {U_LIMIT:g} m/s：{len(idx)}')
-    print('每个复杂度：5折交叉验证，重复5次；随后用全部筛选数据训练最终公式。')
+    print(f'Total data: {n}; actual ub < {U_LIMIT:g} m/s: {len(idx)}')
+    print('For each complexity: 5-fold cross-validation repeated 5 times, followed by final fitting on all selected data.')
 
     for max_length in (10, 15, 20):
-        print(f'\n开始 Operon max_length={max_length}', flush=True)
+        print(f'\nStarting Operon with max_length={max_length}', flush=True)
         repeat_scores = []
         for repeat_i, folds in enumerate(splits):
             pred_nm = np.full(n, np.nan)
@@ -134,7 +134,7 @@ def main():
                 model = make_sr(max_length, seed)
                 model.fit(X[train_idx], y_star[train_idx])
                 pred_nm[test_idx] = model.predict(X[test_idx]) * NM
-                print(f'  repeat {repeat_i + 1}/{N_REP}, fold {fold_i + 1}/{N_FOLD} 完成', flush=True)
+                print(f'  repeat {repeat_i + 1}/{N_REP}, fold {fold_i + 1}/{N_FOLD} completed', flush=True)
             repeat_scores.append(scores(Ls_nm[idx], pred_nm[idx]))
 
         # Match original ML-benchmark.py: final all-selected-data model uses seed=7.
@@ -162,7 +162,7 @@ def main():
         print(f"max_length={max_length}: R2={means['R2']:.4f} ± {sds['R2']:.4f}; "
               f"RMSE={means['RMSE']:.4f} nm; MAE={means['MAE']:.4f} nm; "
               f"within25={means['within25']*100:.1f}%")
-        print('最终公式：', equation)
+        print('Final equation:', equation)
 
     stamp = time.strftime('%Y%m%d_%H%M%S')
     os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -239,7 +239,7 @@ def main():
                    'n_selected': len(idx), 'selection': 'actual ub < 100 m/s',
                    'models': all_results}, f, ensure_ascii=False, indent=2)
 
-    print('\n已保存：')
+    print('\nSaved:')
     print(xlsx_path)
     print(txt_path)
     print(json_path)
