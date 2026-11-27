@@ -1,0 +1,8 @@
+numpy
+openpyxl
+scipy
+scikit-learn
+xgboost
+
+# Optional: required only by code/symbolic_regression.py
+# pyoperon
